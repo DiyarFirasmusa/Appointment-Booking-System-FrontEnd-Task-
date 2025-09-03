@@ -15,7 +15,6 @@ const PWAInstallPrompt: React.FC = () => {
   const [canInstall, setCanInstall] = useState(false)
 
   useEffect(() => {
-    // Check if app is already installed
     if (
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as Navigator & { standalone?: boolean }).standalone === true
@@ -40,31 +39,25 @@ const PWAInstallPrompt: React.FC = () => {
       setCanInstall(false)
     }
 
-    // Add event listeners
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt as EventListener)
     window.addEventListener('appinstalled', handleAppInstalled)
 
-    // Check if the prompt was already dismissed
     const wasPromptDismissed = localStorage.getItem('pwa-install-dismissed')
     if (wasPromptDismissed) {
       const dismissTime = parseInt(wasPromptDismissed)
       const daysSinceDismissed = (Date.now() - dismissTime) / (1000 * 60 * 60 * 24)
 
-      // Show prompt again after 7 days
       if (daysSinceDismissed < 7) {
         setShowInstallPrompt(false)
       } else {
-        // Show prompt if it's been more than 7 days
         setCanInstall(true)
         setShowInstallPrompt(true)
       }
     } else {
-      // If never dismissed, show the prompt
       setCanInstall(true)
       setShowInstallPrompt(true)
     }
 
-    // Fallback: Show prompt after a delay if no beforeinstallprompt event
     const fallbackTimer = setTimeout(() => {
       if (!deferredPrompt && !isInstalled) {
         console.log('Fallback: showing install prompt')
@@ -82,7 +75,6 @@ const PWAInstallPrompt: React.FC = () => {
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
-      // Use the native install prompt
       deferredPrompt.prompt()
       const { outcome } = await deferredPrompt.userChoice
 
@@ -95,7 +87,6 @@ const PWAInstallPrompt: React.FC = () => {
       setDeferredPrompt(null)
       setShowInstallPrompt(false)
     } else {
-      // Fallback: Show instructions for manual installation
       console.log('No deferred prompt available, showing manual install instructions')
       alert(
         'To install this app:\n\n1. Look for the "Install" or "Add to Home Screen" option in your browser menu\n2. Or use the browser\'s "Add to Home Screen" feature\n3. Or drag this tab to your desktop (on some browsers)'
@@ -106,16 +97,13 @@ const PWAInstallPrompt: React.FC = () => {
 
   const handleDismiss = () => {
     setShowInstallPrompt(false)
-    // Store dismissal time to avoid showing prompt too frequently
     localStorage.setItem('pwa-install-dismissed', Date.now().toString())
   }
 
-  // Don't show if already installed
   if (isInstalled) {
     return null
   }
 
-  // Show prompt if we can install and should show it
   const shouldShowPrompt = showInstallPrompt && canInstall
 
   if (!shouldShowPrompt) {
