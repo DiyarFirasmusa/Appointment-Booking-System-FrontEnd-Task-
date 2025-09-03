@@ -1,6 +1,6 @@
 # Appointment Booking System
 
-A modern, responsive appointment booking system built with React, TypeScript, and a comprehensive tech stack designed for production use.
+ appointment booking system built with React, TypeScript, and a comprehensive tech stack designed for production use.
 
 ### Core Framework
 
