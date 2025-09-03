@@ -14,7 +14,11 @@ const PWAInstallPrompt: React.FC = () => {
   const [isInstalled, setIsInstalled] = useState(false)
 
   useEffect(() => {
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    // Check if app is already installed
+    if (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+    ) {
       setIsInstalled(true)
       return
     }
@@ -31,8 +35,21 @@ const PWAInstallPrompt: React.FC = () => {
       setDeferredPrompt(null)
     }
 
+    // Add event listeners
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt as EventListener)
     window.addEventListener('appinstalled', handleAppInstalled)
+
+    // Check if the prompt was already dismissed
+    const wasPromptDismissed = localStorage.getItem('pwa-install-dismissed')
+    if (wasPromptDismissed) {
+      const dismissTime = parseInt(wasPromptDismissed)
+      const daysSinceDismissed = (Date.now() - dismissTime) / (1000 * 60 * 60 * 24)
+
+      // Show prompt again after 7 days
+      if (daysSinceDismissed < 7) {
+        setShowInstallPrompt(false)
+      }
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt as EventListener)
@@ -59,9 +76,19 @@ const PWAInstallPrompt: React.FC = () => {
 
   const handleDismiss = () => {
     setShowInstallPrompt(false)
+    // Store dismissal time to avoid showing prompt too frequently
+    localStorage.setItem('pwa-install-dismissed', Date.now().toString())
   }
 
-  if (isInstalled || !showInstallPrompt || !deferredPrompt) {
+  // Don't show if already installed
+  if (isInstalled) {
+    return null
+  }
+
+  // Show prompt if we have a deferred prompt or if we're in production and haven't been dismissed recently
+  const shouldShowPrompt = showInstallPrompt && deferredPrompt
+
+  if (!shouldShowPrompt) {
     return null
   }
 

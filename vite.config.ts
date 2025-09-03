@@ -13,9 +13,9 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === 'development' && componentTagger(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       devOptions: {
-        enabled: true,
+        enabled: mode === 'development',
         type: 'module',
       },
       workbox: {
@@ -26,11 +26,22 @@ export default defineConfig(({ mode }) => ({
         short_name: 'BookingApp',
         description: 'A modern appointment booking system',
         theme_color: '#ffffff',
+        background_color: '#ffffff',
+        display: 'standalone',
+        start_url: '/',
+        scope: '/',
         icons: [
           {
             src: 'placeholder.svg',
             sizes: '192x192',
             type: 'image/svg+xml',
+            purpose: 'any maskable',
+          },
+          {
+            src: 'placeholder.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            purpose: 'any maskable',
           },
         ],
       },
