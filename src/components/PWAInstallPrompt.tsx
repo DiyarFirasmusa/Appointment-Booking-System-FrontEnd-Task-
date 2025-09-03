@@ -54,17 +54,19 @@ const PWAInstallPrompt: React.FC = () => {
         setShowInstallPrompt(true)
       }
     } else {
-      setCanInstall(true)
-      setShowInstallPrompt(true)
+      // If never dismissed, wait for beforeinstallprompt event first
+      // Don't show immediately to give chance for native prompt
+      console.log('Waiting for beforeinstallprompt event...')
     }
 
+    // Only show fallback if no beforeinstallprompt event after 5 seconds
     const fallbackTimer = setTimeout(() => {
       if (!deferredPrompt && !isInstalled) {
-        console.log('Fallback: showing install prompt')
+        console.log('Fallback: showing install prompt after timeout')
         setCanInstall(true)
         setShowInstallPrompt(true)
       }
-    }, 3000)
+    }, 5000)
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt as EventListener)
@@ -75,22 +77,38 @@ const PWAInstallPrompt: React.FC = () => {
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
-      deferredPrompt.prompt()
-      const { outcome } = await deferredPrompt.userChoice
+      try {
+        await deferredPrompt.prompt()
+        const { outcome } = await deferredPrompt.userChoice
 
-      if (outcome === 'accepted') {
-        console.log('User accepted the install prompt')
-      } else {
-        console.log('User dismissed the install prompt')
+        if (outcome === 'accepted') {
+          console.log('User accepted the install prompt')
+        } else {
+          console.log('User dismissed the install prompt')
+        }
+      } catch (error) {
+        console.log('Error during install prompt:', error)
       }
 
       setDeferredPrompt(null)
       setShowInstallPrompt(false)
     } else {
-      console.log('No deferred prompt available, showing manual install instructions')
-      alert(
-        'To install this app:\n\n1. Look for the "Install" or "Add to Home Screen" option in your browser menu\n2. Or use the browser\'s "Add to Home Screen" feature\n3. Or drag this tab to your desktop (on some browsers)'
-      )
+      // If no deferred prompt, try to trigger installation through other means
+      console.log('No deferred prompt available, trying alternative installation methods')
+
+      // For iOS Safari, try to show the share sheet
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'Install Appointment Booking App',
+            text: 'Install this app for quick access',
+            url: window.location.href,
+          })
+        } catch (error) {
+          console.log('Share failed:', error)
+        }
+      }
+
       setShowInstallPrompt(false)
     }
   }
