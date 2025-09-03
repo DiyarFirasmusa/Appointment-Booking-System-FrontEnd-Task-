@@ -12,6 +12,7 @@ const PWAInstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showInstallPrompt, setShowInstallPrompt] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
+  const [canInstall, setCanInstall] = useState(false)
 
   useEffect(() => {
     // Check if app is already installed
@@ -24,15 +25,19 @@ const PWAInstallPrompt: React.FC = () => {
     }
 
     const handleBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
+      console.log('beforeinstallprompt event fired')
       e.preventDefault()
       setDeferredPrompt(e)
+      setCanInstall(true)
       setShowInstallPrompt(true)
     }
 
     const handleAppInstalled = () => {
+      console.log('App installed')
       setIsInstalled(true)
       setShowInstallPrompt(false)
       setDeferredPrompt(null)
+      setCanInstall(false)
     }
 
     // Add event listeners
@@ -48,30 +53,55 @@ const PWAInstallPrompt: React.FC = () => {
       // Show prompt again after 7 days
       if (daysSinceDismissed < 7) {
         setShowInstallPrompt(false)
+      } else {
+        // Show prompt if it's been more than 7 days
+        setCanInstall(true)
+        setShowInstallPrompt(true)
       }
+    } else {
+      // If never dismissed, show the prompt
+      setCanInstall(true)
+      setShowInstallPrompt(true)
     }
+
+    // Fallback: Show prompt after a delay if no beforeinstallprompt event
+    const fallbackTimer = setTimeout(() => {
+      if (!deferredPrompt && !isInstalled) {
+        console.log('Fallback: showing install prompt')
+        setCanInstall(true)
+        setShowInstallPrompt(true)
+      }
+    }, 3000)
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt as EventListener)
       window.removeEventListener('appinstalled', handleAppInstalled)
+      clearTimeout(fallbackTimer)
     }
-  }, [])
+  }, [deferredPrompt, isInstalled])
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return
+    if (deferredPrompt) {
+      // Use the native install prompt
+      deferredPrompt.prompt()
+      const { outcome } = await deferredPrompt.userChoice
 
-    deferredPrompt.prompt()
+      if (outcome === 'accepted') {
+        console.log('User accepted the install prompt')
+      } else {
+        console.log('User dismissed the install prompt')
+      }
 
-    const { outcome } = await deferredPrompt.userChoice
-
-    if (outcome === 'accepted') {
-      console.log('User accepted the install prompt')
+      setDeferredPrompt(null)
+      setShowInstallPrompt(false)
     } else {
-      console.log('User dismissed the install prompt')
+      // Fallback: Show instructions for manual installation
+      console.log('No deferred prompt available, showing manual install instructions')
+      alert(
+        'To install this app:\n\n1. Look for the "Install" or "Add to Home Screen" option in your browser menu\n2. Or use the browser\'s "Add to Home Screen" feature\n3. Or drag this tab to your desktop (on some browsers)'
+      )
+      setShowInstallPrompt(false)
     }
-
-    setDeferredPrompt(null)
-    setShowInstallPrompt(false)
   }
 
   const handleDismiss = () => {
@@ -85,8 +115,8 @@ const PWAInstallPrompt: React.FC = () => {
     return null
   }
 
-  // Show prompt if we have a deferred prompt or if we're in production and haven't been dismissed recently
-  const shouldShowPrompt = showInstallPrompt && deferredPrompt
+  // Show prompt if we can install and should show it
+  const shouldShowPrompt = showInstallPrompt && canInstall
 
   if (!shouldShowPrompt) {
     return null
